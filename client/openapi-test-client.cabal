@@ -1,0 +1,35 @@
+cabal-version:      3.0
+name:               openapi-test-client
+version:            0.1.0.0
+synopsis:
+homepage:
+license:            Apache-2.0
+author:             Tom Bärwinkel
+maintainer:         dev@baerwinkel.org
+category:           Web
+
+library
+    hs-source-dirs:   lib
+    exposed-modules:  Lib
+    build-depends:    base,
+                      apikey-spec,
+                      basic-spec,
+                      bearer-spec,
+                      noauth-spec,
+                      transformers
+    default-language: Haskell2010
+
+executable openapi-test-client
+    hs-source-dirs:   app
+    main-is:          Main.hs
+    build-depends:
+        base,
+        openapi-test-client
+    default-language: Haskell2010
+
+test-suite openapi-test-server-test
+    hs-source-dirs:   test
+    main-is:          LibTest.hs
+    build-depends:    base
+    type:             exitcode-stdio-1.0
+    default-language: Haskell2010

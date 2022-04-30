@@ -1,0 +1,6 @@
+README.md
+Setup.hs
+basic-spec.cabal
+lib/BasicSpec/API.hs
+lib/BasicSpec/Types.hs
+stack.yaml

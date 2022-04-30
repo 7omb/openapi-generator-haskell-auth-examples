@@ -1,0 +1,84 @@
+openapi: 3.0.0
+info:
+  title: Bearer Spec
+  version: 0.0.1
+paths:
+  /health:
+    get:
+      summary: Check health of the API
+      security: []
+      responses:
+        200:
+          description: healthy
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        503:
+          description: unavailable
+  /users:
+    get:
+      summary: List of all users
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/user"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/id"
+    get:
+      summary: Get user by ID
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+components:
+  schemas:
+    user:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: ["admin", "user"]
+      required: ["name", "role"]
+    error:
+      type: object
+      properties:
+        message:
+          type: string
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid API key
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - BearerAuth: []

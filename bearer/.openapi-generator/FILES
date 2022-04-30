@@ -1,0 +1,6 @@
+README.md
+Setup.hs
+bearer-spec.cabal
+lib/BearerSpec/API.hs
+lib/BearerSpec/Types.hs
+stack.yaml

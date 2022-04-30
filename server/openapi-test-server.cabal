@@ -1,0 +1,73 @@
+cabal-version:      3.0
+name:               openapi-test-server
+version:            0.1.0.0
+synopsis:
+homepage:
+license:            Apache-2.0
+author:             Tom Bärwinkel
+maintainer:         dev@baerwinkel.org
+category:           Web
+
+library
+    hs-source-dirs:   lib
+    exposed-modules:  Lib
+    build-depends:    base,
+                      servant,
+                      wai,
+                      wai-extra,
+                      bytestring,
+                      containers,
+                      text,
+                      servant-server
+    default-language: Haskell2010
+
+executable noauth-server
+    hs-source-dirs:   app
+    main-is:          Noauth.hs
+    build-depends:
+        base,
+        servant,
+        servant-server,
+        noauth-spec,
+        openapi-test-server
+    default-language: Haskell2010
+
+executable apikey-server
+    hs-source-dirs:   app
+    main-is:          Apikey.hs
+    build-depends:
+        base,
+        servant,
+        servant-server,
+        apikey-spec,
+        openapi-test-server
+    default-language: Haskell2010
+
+executable basic-server
+    hs-source-dirs:   app
+    main-is:          Basic.hs
+    build-depends:
+        base,
+        servant,
+        servant-server,
+        basic-spec,
+        openapi-test-server
+    default-language: Haskell2010
+
+executable bearer-server
+    hs-source-dirs:   app
+    main-is:          Bearer.hs
+    build-depends:
+        base,
+        servant,
+        servant-server,
+        bearer-spec,
+        openapi-test-server
+    default-language: Haskell2010
+
+test-suite openapi-test-server-test
+    hs-source-dirs:   test
+    main-is:          LibTest.hs
+    build-depends:    base
+    type:             exitcode-stdio-1.0
+    default-language: Haskell2010
