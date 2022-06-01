@@ -46,6 +46,7 @@ import           Data.ByteString                    (ByteString)
 import           Data.Coerce                        (coerce)
 import           Data.Data                          (Data)
 import           Data.Function                      ((&))
+import qualified Data.Map                           as Map
 import           Data.Monoid                        ((<>))
 import           Data.Proxy                         (Proxy (..))
 import           Data.Set                           (Set)
