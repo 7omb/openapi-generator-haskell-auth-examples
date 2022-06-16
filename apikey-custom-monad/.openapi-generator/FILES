@@ -1,0 +1,7 @@
+.openapi-generator-ignore
+README.md
+Setup.hs
+apikey-custom-monad-spec.cabal
+lib/ApikeyCustomMonadSpec/API.hs
+lib/ApikeyCustomMonadSpec/Types.hs
+stack.yaml
