@@ -28,6 +28,8 @@
             (haskellPkgs.callCabal2nix "bearer-spec" ./bearer { });
           noauth-spec-haskell =
             (haskellPkgs.callCabal2nix "noauth-spec" ./noauth { });
+          custom-monad-spec-haskell =
+            (haskellPkgs.callCabal2nix "custom-monad-spec" ./custom-monad { });
 
           openapi-test-server =
             (haskellPkgs.callCabal2nix "openapi-test-server" ./server {
@@ -35,6 +37,7 @@
               basic-spec = basic-spec-haskell;
               bearer-spec = bearer-spec-haskell;
               noauth-spec = noauth-spec-haskell;
+              custom-monad-spec = custom-monad-spec-haskell;
             });
 
           openapi-test-client =
@@ -67,6 +70,11 @@
           bearer-server = flake-utils.lib.mkApp {
             drv = self.packages.${system}.openapi-test-server;
             exePath = "/bin/bearer-server";
+          };
+
+          custom-monad-server = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.openapi-test-server;
+            exePath = "/bin/custom-monad-server";
           };
 
           apikey-client = flake-utils.lib.mkApp {

@@ -61,7 +61,7 @@ import           Network.HTTP.Types.Method          (methodOptions)
 import           Network.Wai                        (Middleware, Request, requestHeaders)
 import qualified Network.Wai.Handler.Warp           as Warp
 import           Network.Wai.Middleware.HttpAuth    (extractBasicAuth)
-import           Servant                            (ServerError, serveWithContext, throwError)
+import           Servant                            (ServerError, serveWithContextT, throwError)
 import           Servant.API                        hiding (addHeader)
 import           Servant.API.BasicAuth              (BasicAuthData (..))
 import           Servant.API.Verbs                  (StdMethod (..), Verb)
@@ -242,7 +242,7 @@ runBasicSpecMiddlewareServer Config{..} middleware auth backend = do
 --
 -- Can be used to implement e.g. tests that call the API without a full webserver.
 serverWaiApplicationBasicSpec :: BasicSpecAuth -> BasicSpecBackend AuthServer (ExceptT ServerError IO) -> Application
-serverWaiApplicationBasicSpec auth backend = serveWithContext (Proxy :: Proxy BasicSpecAPI) context (serverFromBackend backend)
+serverWaiApplicationBasicSpec auth backend = serveWithContextT (Proxy :: Proxy BasicSpecAPI) context id (serverFromBackend backend)
   where
     context = serverContext auth
     serverFromBackend BasicSpecBackend{..} =

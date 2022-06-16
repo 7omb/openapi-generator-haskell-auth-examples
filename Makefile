@@ -1,4 +1,4 @@
-.PHONY: all noauth apikey basic bearer clean
+.PHONY: all noauth apikey basic bearer custom-monad clean
 
 # NOTE: change to source of openapi-generator
 GENERATOR_SOURCE := /home/tom/git/openapi-generator
@@ -17,6 +17,7 @@ all:
 	$(MAKE) apikey
 	$(MAKE) basic
 	$(MAKE) bearer
+	$(MAKE) custom-monad
 
 noauth:
 	java -jar $(GENERATOR_JAR) generate -i noauth.yaml -o noauth $(GENERATOR_OPTS)
@@ -30,5 +31,8 @@ basic:
 bearer:
 	java -jar $(GENERATOR_JAR) generate -i bearer.yaml -o bearer $(GENERATOR_OPTS)
 
+custom-monad:
+	java -jar $(GENERATOR_JAR) generate -i custom-monad.yaml -o custom-monad  -p useCustomMonad=true $(GENERATOR_OPTS)
+
 clean:
-	rm -rf noauth apikey basic bearer
+	rm -rf noauth apikey basic bearer custom-monad

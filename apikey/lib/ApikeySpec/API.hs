@@ -61,7 +61,7 @@ import           Network.HTTP.Client.TLS            (tlsManagerSettings)
 import           Network.HTTP.Types.Method          (methodOptions)
 import           Network.Wai                        (Middleware, Request, requestHeaders)
 import qualified Network.Wai.Handler.Warp           as Warp
-import           Servant                            (ServerError, serveWithContext, throwError)
+import           Servant                            (ServerError, serveWithContextT, throwError)
 import           Servant.API                        hiding (addHeader)
 import           Servant.API.Verbs                  (StdMethod (..), Verb)
 import           Servant.API.Experimental.Auth      (AuthProtect)
@@ -241,7 +241,7 @@ runApikeySpecMiddlewareServer Config{..} middleware auth backend = do
 --
 -- Can be used to implement e.g. tests that call the API without a full webserver.
 serverWaiApplicationApikeySpec :: ApikeySpecAuth -> ApikeySpecBackend AuthServer (ExceptT ServerError IO) -> Application
-serverWaiApplicationApikeySpec auth backend = serveWithContext (Proxy :: Proxy ApikeySpecAPI) context (serverFromBackend backend)
+serverWaiApplicationApikeySpec auth backend = serveWithContextT (Proxy :: Proxy ApikeySpecAPI) context id (serverFromBackend backend)
   where
     context = serverContext auth
     serverFromBackend ApikeySpecBackend{..} =

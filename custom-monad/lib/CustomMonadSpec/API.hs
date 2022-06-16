@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -13,36 +14,31 @@
 {-# OPTIONS_GHC
 -fno-warn-unused-binds -fno-warn-unused-imports -freduction-depth=328 #-}
 
-module BearerSpec.API
+module CustomMonadSpec.API
   ( -- * Client and Server
     Config(..)
-  , BearerSpecBackend(..)
-  , createBearerSpecClient
-  , runBearerSpecServer
-  , runBearerSpecMiddlewareServer
-  , runBearerSpecClient
-  , runBearerSpecClientWithManager
-  , callBearerSpec
-  , BearerSpecClient
-  , BearerSpecClientError(..)
+  , CustomMonadSpecBackend(..)
+  , createCustomMonadSpecClient
+  , runCustomMonadSpecServer
+  , runCustomMonadSpecMiddlewareServer
+  , runCustomMonadSpecClient
+  , runCustomMonadSpecClientWithManager
+  , callCustomMonadSpec
+  , CustomMonadSpecClient
+  , CustomMonadSpecClientError(..)
   -- ** Servant
-  , BearerSpecAPI
+  , CustomMonadSpecAPI
   -- ** Plain WAI Application
-  , serverWaiApplicationBearerSpec
-  -- ** Authentication
-  , BearerSpecAuth(..)
-  , clientAuth
-  , Protected
+  , serverWaiApplicationCustomMonadSpec
   ) where
 
-import           BearerSpec.Types
+import           CustomMonadSpec.Types
 
 import           Control.Monad.Catch                (Exception, MonadThrow, throwM)
 import           Control.Monad.Except               (ExceptT, runExceptT)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Reader         (ReaderT (..))
 import           Data.Aeson                         (Value)
-import           Data.ByteString                    (ByteString)
 import           Data.Coerce                        (coerce)
 import           Data.Data                          (Data)
 import           Data.Function                      ((&))
@@ -59,19 +55,16 @@ import           GHC.Generics                       (Generic)
 import           Network.HTTP.Client                (Manager, newManager)
 import           Network.HTTP.Client.TLS            (tlsManagerSettings)
 import           Network.HTTP.Types.Method          (methodOptions)
-import           Network.Wai                        (Middleware, Request, requestHeaders)
+import           Network.Wai                        (Middleware)
 import qualified Network.Wai.Handler.Warp           as Warp
-import           Network.Wai.Middleware.HttpAuth    (extractBearerAuth)
-import           Servant                            (ServerError, serveWithContextT, throwError)
+import           Servant                            (ServerError, serveWithContextT)
 import           Servant.API                        hiding (addHeader)
 import           Servant.API.Verbs                  (StdMethod (..), Verb)
-import           Servant.API.Experimental.Auth      (AuthProtect)
 import           Servant.Client                     (ClientEnv, Scheme (Http), ClientError, client,
                                                      mkClientEnv, parseBaseUrl)
-import           Servant.Client.Core                (baseUrlPort, baseUrlHost, AuthClientData, AuthenticatedRequest, addHeader, mkAuthenticatedRequest)
+import           Servant.Client.Core                (baseUrlPort, baseUrlHost)
 import           Servant.Client.Internal.HttpClient (ClientM (..))
-import           Servant.Server                     (Handler (..), Application, Context ((:.), EmptyContext))
-import           Servant.Server.Experimental.Auth   (AuthHandler, AuthServerData, mkAuthHandler)
+import           Servant.Server                     (Handler (..), Application, Context (EmptyContext))
 import           Servant.Server.StaticFiles         (serveDirectoryFileServer)
 import           Web.FormUrlEncoded
 import           Web.HttpApiData
@@ -129,11 +122,11 @@ formatSeparatedQueryList :: ToHttpApiData a => Char ->  QueryList p a -> Text
 formatSeparatedQueryList char = T.intercalate (T.singleton char) . map toQueryParam . fromQueryList
 
 
--- | Servant type-level API, generated from the OpenAPI spec for BearerSpec.
-type BearerSpecAPI
+-- | Servant type-level API, generated from the OpenAPI spec for CustomMonadSpec.
+type CustomMonadSpecAPI
     =    "health" :> Verb 'GET 200 '[JSON] NoContent -- 'healthGet' route
-    :<|> Protected :> "users" :> Verb 'GET 200 '[JSON] [User] -- 'usersGet' route
-    :<|> Protected :> "users" :> Capture "id" Int :> Verb 'GET 200 '[JSON] User -- 'usersIdGet' route
+    :<|> "users" :> Verb 'GET 200 '[JSON] [User] -- 'usersGet' route
+    :<|> "users" :> Capture "id" Int :> Verb 'GET 200 '[JSON] User -- 'usersIdGet' route
     :<|> Raw
 
 
@@ -144,132 +137,105 @@ data Config = Config
 
 
 -- | Custom exception type for our errors.
-newtype BearerSpecClientError = BearerSpecClientError ClientError
+newtype CustomMonadSpecClientError = CustomMonadSpecClientError ClientError
   deriving (Show, Exception)
 -- | Configuration, specifying the full url of the service.
 
 
--- | Backend for BearerSpec.
--- The backend can be used both for the client and the server. The client generated from the BearerSpec OpenAPI spec
--- is a backend that executes actions by sending HTTP requests (see @createBearerSpecClient@). Alternatively, provided
--- a backend, the API can be served using @runBearerSpecMiddlewareServer@.
-data BearerSpecBackend a m = BearerSpecBackend
+-- | Backend for CustomMonadSpec.
+-- The backend can be used both for the client and the server. The client generated from the CustomMonadSpec OpenAPI spec
+-- is a backend that executes actions by sending HTTP requests (see @createCustomMonadSpecClient@). Alternatively, provided
+-- a backend, the API can be served using @runCustomMonadSpecMiddlewareServer@.
+data CustomMonadSpecBackend m = CustomMonadSpecBackend
   { healthGet :: m NoContent{- ^  -}
-  , usersGet :: a -> m [User]{- ^  -}
-  , usersIdGet :: a -> Int -> m User{- ^  -}
+  , usersGet :: m [User]{- ^  -}
+  , usersIdGet :: Int -> m User{- ^  -}
   }
 
--- | Authentication settings for BearerSpec.
--- lookupUser is used to retrieve a user given a header value. The data type can be specified by providing an
--- type instance for AuthServerData. authError is a function that given a request returns a custom error that
--- is returned when the header is not found.
-data BearerSpecAuth = BearerSpecAuth
-  { lookupUser :: ByteString -> Handler AuthServer
-  , authError :: Request -> ServerError
-  }
 
-newtype BearerSpecClient a = BearerSpecClient
+newtype CustomMonadSpecClient a = CustomMonadSpecClient
   { runClient :: ClientEnv -> ExceptT ClientError IO a
   } deriving Functor
 
-instance Applicative BearerSpecClient where
-  pure x = BearerSpecClient (\_ -> pure x)
-  (BearerSpecClient f) <*> (BearerSpecClient x) =
-    BearerSpecClient (\env -> f env <*> x env)
+instance Applicative CustomMonadSpecClient where
+  pure x = CustomMonadSpecClient (\_ -> pure x)
+  (CustomMonadSpecClient f) <*> (CustomMonadSpecClient x) =
+    CustomMonadSpecClient (\env -> f env <*> x env)
 
-instance Monad BearerSpecClient where
-  (BearerSpecClient a) >>= f =
-    BearerSpecClient (\env -> do
+instance Monad CustomMonadSpecClient where
+  (CustomMonadSpecClient a) >>= f =
+    CustomMonadSpecClient (\env -> do
       value <- a env
       runClient (f value) env)
 
-instance MonadIO BearerSpecClient where
-  liftIO io = BearerSpecClient (\_ -> liftIO io)
+instance MonadIO CustomMonadSpecClient where
+  liftIO io = CustomMonadSpecClient (\_ -> liftIO io)
 
-createBearerSpecClient :: BearerSpecBackend AuthClient BearerSpecClient
-createBearerSpecClient = BearerSpecBackend{..}
+createCustomMonadSpecClient :: CustomMonadSpecBackend CustomMonadSpecClient
+createCustomMonadSpecClient = CustomMonadSpecBackend{..}
   where
     ((coerce -> healthGet) :<|>
      (coerce -> usersGet) :<|>
      (coerce -> usersIdGet) :<|>
-     _) = client (Proxy :: Proxy BearerSpecAPI)
+     _) = client (Proxy :: Proxy CustomMonadSpecAPI)
 
--- | Run requests in the BearerSpecClient monad.
-runBearerSpecClient :: Config -> BearerSpecClient a -> ExceptT ClientError IO a
-runBearerSpecClient clientConfig cl = do
+-- | Run requests in the CustomMonadSpecClient monad.
+runCustomMonadSpecClient :: Config -> CustomMonadSpecClient a -> ExceptT ClientError IO a
+runCustomMonadSpecClient clientConfig cl = do
   manager <- liftIO $ newManager tlsManagerSettings
-  runBearerSpecClientWithManager manager clientConfig cl
+  runCustomMonadSpecClientWithManager manager clientConfig cl
 
--- | Run requests in the BearerSpecClient monad using a custom manager.
-runBearerSpecClientWithManager :: Manager -> Config -> BearerSpecClient a -> ExceptT ClientError IO a
-runBearerSpecClientWithManager manager Config{..} cl = do
+-- | Run requests in the CustomMonadSpecClient monad using a custom manager.
+runCustomMonadSpecClientWithManager :: Manager -> Config -> CustomMonadSpecClient a -> ExceptT ClientError IO a
+runCustomMonadSpecClientWithManager manager Config{..} cl = do
   url <- parseBaseUrl configUrl
   runClient cl $ mkClientEnv manager url
 
 -- | Like @runClient@, but returns the response or throws
---   a BearerSpecClientError
-callBearerSpec
+--   a CustomMonadSpecClientError
+callCustomMonadSpec
   :: (MonadIO m, MonadThrow m)
-  => ClientEnv -> BearerSpecClient a -> m a
-callBearerSpec env f = do
+  => ClientEnv -> CustomMonadSpecClient a -> m a
+callCustomMonadSpec env f = do
   res <- liftIO $ runExceptT $ runClient f env
   case res of
-    Left err       -> throwM (BearerSpecClientError err)
+    Left err       -> throwM (CustomMonadSpecClientError err)
     Right response -> pure response
 
 
 requestMiddlewareId :: Application -> Application
 requestMiddlewareId a = a
 
--- | Run the BearerSpec server at the provided host and port.
-runBearerSpecServer
+-- | Run the CustomMonadSpec server at the provided host and port.
+runCustomMonadSpecServer
   :: (MonadIO m, MonadThrow m)
-  => Config -> BearerSpecAuth -> BearerSpecBackend AuthServer (ExceptT ServerError IO) -> m ()
-runBearerSpecServer config auth backend = runBearerSpecMiddlewareServer config requestMiddlewareId auth backend
+  => Config -> (forall x . n x -> Handler x) -> CustomMonadSpecBackend n -> m ()
+runCustomMonadSpecServer config nat backend = runCustomMonadSpecMiddlewareServer config requestMiddlewareId nat backend
 
--- | Run the BearerSpec server at the provided host and port.
-runBearerSpecMiddlewareServer
+-- | Run the CustomMonadSpec server at the provided host and port.
+runCustomMonadSpecMiddlewareServer
   :: (MonadIO m, MonadThrow m)
-  => Config -> Middleware -> BearerSpecAuth -> BearerSpecBackend AuthServer (ExceptT ServerError IO) -> m ()
-runBearerSpecMiddlewareServer Config{..} middleware auth backend = do
+  => Config -> Middleware -> (forall x . n x -> Handler x) -> CustomMonadSpecBackend n -> m ()
+runCustomMonadSpecMiddlewareServer Config{..} middleware nat backend = do
   url <- parseBaseUrl configUrl
   let warpSettings = Warp.defaultSettings
         & Warp.setPort (baseUrlPort url)
         & Warp.setHost (fromString $ baseUrlHost url)
-  liftIO $ Warp.runSettings warpSettings $ middleware $ serverWaiApplicationBearerSpec auth backend
+  liftIO $ Warp.runSettings warpSettings $ middleware $ serverWaiApplicationCustomMonadSpec nat backend
 
--- | Plain "Network.Wai" Application for the BearerSpec server.
+-- | Plain "Network.Wai" Application for the CustomMonadSpec server.
 --
 -- Can be used to implement e.g. tests that call the API without a full webserver.
-serverWaiApplicationBearerSpec :: BearerSpecAuth -> BearerSpecBackend AuthServer (ExceptT ServerError IO) -> Application
-serverWaiApplicationBearerSpec auth backend = serveWithContextT (Proxy :: Proxy BearerSpecAPI) context id (serverFromBackend backend)
+serverWaiApplicationCustomMonadSpec :: (forall x . n x -> Handler x) -> CustomMonadSpecBackend n -> Application
+serverWaiApplicationCustomMonadSpec nat backend = serveWithContextT (Proxy :: Proxy CustomMonadSpecAPI) context nat (serverFromBackend backend)
   where
-    context = serverContext auth
-    serverFromBackend BearerSpecBackend{..} =
+    context = serverContext
+    serverFromBackend CustomMonadSpecBackend{..} =
       (coerce healthGet :<|>
        coerce usersGet :<|>
        coerce usersIdGet :<|>
        serveDirectoryFileServer "static")
 
--- Authentication is implemented with servants generalized authentication:
--- https://docs.servant.dev/en/stable/tutorial/Authentication.html#generalized-authentication
 
-authHandler :: BearerSpecAuth -> AuthHandler Request AuthServer
-authHandler BearerSpecAuth{..} = mkAuthHandler handler
-  where
-    handler req = case lookup "Authorization" (requestHeaders req) of
-      Just header -> case extractBearerAuth header of
-        Just key -> lookupUser key
-        Nothing -> throwError (authError req)
-      Nothing -> throwError (authError req)
-
-type Protected = AuthProtect "bearer"
-type AuthServer = AuthServerData Protected
-type AuthClient = AuthenticatedRequest Protected
-type instance AuthClientData Protected = Text
-
-clientAuth :: Text -> AuthClient
-clientAuth key = mkAuthenticatedRequest ("Bearer " <> key) (addHeader "Authorization")
-
-serverContext :: BearerSpecAuth -> Context (AuthHandler Request AuthServer ': '[])
-serverContext auth = authHandler auth :. EmptyContext
+serverContext :: Context ('[])
+serverContext = EmptyContext

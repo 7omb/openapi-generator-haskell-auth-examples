@@ -56,7 +56,7 @@ import           Network.HTTP.Client.TLS            (tlsManagerSettings)
 import           Network.HTTP.Types.Method          (methodOptions)
 import           Network.Wai                        (Middleware)
 import qualified Network.Wai.Handler.Warp           as Warp
-import           Servant                            (ServerError, serveWithContext)
+import           Servant                            (ServerError, serveWithContextT)
 import           Servant.API                        hiding (addHeader)
 import           Servant.API.Verbs                  (StdMethod (..), Verb)
 import           Servant.Client                     (ClientEnv, Scheme (Http), ClientError, client,
@@ -226,7 +226,7 @@ runNoauthSpecMiddlewareServer Config{..} middleware backend = do
 --
 -- Can be used to implement e.g. tests that call the API without a full webserver.
 serverWaiApplicationNoauthSpec :: NoauthSpecBackend (ExceptT ServerError IO) -> Application
-serverWaiApplicationNoauthSpec backend = serveWithContext (Proxy :: Proxy NoauthSpecAPI) context (serverFromBackend backend)
+serverWaiApplicationNoauthSpec backend = serveWithContextT (Proxy :: Proxy NoauthSpecAPI) context id (serverFromBackend backend)
   where
     context = serverContext
     serverFromBackend NoauthSpecBackend{..} =
