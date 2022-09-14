@@ -18,6 +18,7 @@ all:
 	$(MAKE) basic
 	$(MAKE) bearer
 	$(MAKE) custom-monad
+	$(MAKE) apikey-custom-monad
 
 noauth:
 	java -jar $(GENERATOR_JAR) generate -i noauth.yaml -o noauth $(GENERATOR_OPTS)
