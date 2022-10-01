@@ -6,8 +6,7 @@ module Main where
 import ApikeySpec.API
 import ApikeySpec.Types
 import Lib
-import Servant.API.ContentTypes (NoContent (..))
-import Servant.Server (err401, errBody)
+import Servant (NoContent (..), addHeader, err401, errBody)
 import Servant.Server.Experimental.Auth (AuthServerData)
 
 type instance AuthServerData Protected = Account
@@ -25,8 +24,8 @@ backend :: Monad m => ApikeySpecBackend a m
 backend =
   ApikeySpecBackend
     { healthGet = return NoContent,
-      usersGet = \account -> return [],
-      usersIdGet = \account _ -> return User {userName = "foo", userRole = "admin"}
+      usersGet = \account -> return $ addHeader "content" [],
+      usersIdGet = \account _ -> return $ addHeader 1 $ addHeader "cookie1" $ addHeader "cookie2" $ addHeader "cookie3" User {userName = "foo", userRole = "admin"}
     }
 
 main :: IO ()

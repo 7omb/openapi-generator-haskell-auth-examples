@@ -1,4 +1,4 @@
-.PHONY: all noauth apikey basic bearer custom-monad apikey-custom-monad clean
+.PHONY: openapi all noauth apikey basic bearer custom-monad apikey-custom-monad clean
 
 # NOTE: change to source of openapi-generator
 GENERATOR_SOURCE := /home/tom/git/openapi-generator
@@ -12,13 +12,16 @@ GENERATOR_JAR := $(GENERATOR_SOURCE)/modules/openapi-generator-cli/target/openap
 GENERATOR_OPTS := -p disallowAdditionalPropertiesIfNotPresent=false -g haskell --global-property debugSupportingFiles=true
 
 all:
-	(cd $(GENERATOR_SOURCE) && ./mvnw package)
+	$(MAKE) openapi
 	$(MAKE) noauth
 	$(MAKE) apikey
 	$(MAKE) basic
 	$(MAKE) bearer
 	$(MAKE) custom-monad
 	$(MAKE) apikey-custom-monad
+
+openapi:
+	(cd $(GENERATOR_SOURCE) && ./mvnw package)
 
 noauth:
 	java -jar $(GENERATOR_JAR) generate -i noauth.yaml -o noauth $(GENERATOR_OPTS)

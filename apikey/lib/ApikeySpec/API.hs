@@ -131,8 +131,8 @@ formatSeparatedQueryList char = T.intercalate (T.singleton char) . map toQueryPa
 -- | Servant type-level API, generated from the OpenAPI spec for ApikeySpec.
 type ApikeySpecAPI
     =    "health" :> Verb 'GET 200 '[JSON] NoContent -- 'healthGet' route
-    :<|> Protected :> "users" :> Verb 'GET 200 '[JSON] [User] -- 'usersGet' route
-    :<|> Protected :> "users" :> Capture "id" Int :> Verb 'GET 200 '[JSON] User -- 'usersIdGet' route
+    :<|> Protected :> "users" :> Verb 'GET 200 '[JSON] (Headers '[Header "X-Header-1" Text] [User]) -- 'usersGet' route
+    :<|> Protected :> "users" :> Capture "id" Int :> Verb 'GET 200 '[JSON] (Headers '[Header "X-Header-1" Int, Header "Set-Cookie" Text, Header "Set-Cookie" Text, Header "Set-Cookie" Text] User) -- 'usersIdGet' route
     :<|> Raw
 
 
@@ -154,8 +154,8 @@ newtype ApikeySpecClientError = ApikeySpecClientError ClientError
 -- a backend, the API can be served using @runApikeySpecMiddlewareServer@.
 data ApikeySpecBackend a m = ApikeySpecBackend
   { healthGet :: m NoContent{- ^  -}
-  , usersGet :: a -> m [User]{- ^  -}
-  , usersIdGet :: a -> Int -> m User{- ^  -}
+  , usersGet :: a -> m (Headers '[Header "X-Header-1" Text] [User]){- ^  -}
+  , usersIdGet :: a -> Int -> m (Headers '[Header "X-Header-1" Int, Header "Set-Cookie" Text, Header "Set-Cookie" Text, Header "Set-Cookie" Text] User){- ^  -}
   }
 
 -- | Authentication settings for ApikeySpec.

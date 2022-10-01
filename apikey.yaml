@@ -19,6 +19,11 @@ paths:
       summary: List of all users
       responses:
         200:
+          headers:
+            X-Header-1:
+              description: Test header 1
+              schema:
+                type: string
           description: OK
           content:
             application/json:
@@ -36,6 +41,23 @@ paths:
       responses:
         200:
           description: OK
+          headers:
+            X-Header-1:
+              description: Test header
+              schema:
+                type: integer
+            Set-Cookie:
+              description: Test cookie 1
+              schema:
+                type: string
+            "Set-Cookie\0":
+              description: Test cookie 2
+              schema:
+                type: string
+            "Set-Cookie\0\0":
+              description: Test cookie 3
+              schema:
+                type: string
           content:
             application/json:
               schema:
